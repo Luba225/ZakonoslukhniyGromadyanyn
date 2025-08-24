@@ -2,6 +2,8 @@ Cross-platform mobile application that allows you to:
 * record offenses (photo, description, category, location, date and time);
 * view them in the calendar and on the map;
 * work offline with subsequent synchronization with the server.
+
+
 Currently implemented:
 1.Initial project
 2.Preparation of BottomTabNavigation(calendar, map, new)
