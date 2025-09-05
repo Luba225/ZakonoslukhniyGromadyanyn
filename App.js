@@ -2,22 +2,33 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+
 import DrawerNavigation from './src/navigation/DrawerNavigation';
-import './src/i18n/i18n';
-import { loadLanguage } from './src/i18n/i18n';
 import { ThemeProvider } from './src/context/ThemeContext';
+import { loadLanguage } from './src/i18n/i18n';
+import { initDb } from './src/services/db';
 
 export default function App() {
-  const [isLangLoaded, setIsLangLoaded] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      await loadLanguage();
-      setIsLangLoaded(true);
-    })();
+    async function prepareApp() {
+      try {
+        await loadLanguage();
+        await initDb();
+        console.log('Database initialized successfully.');
+      } catch (e) {
+        console.warn('Failed to prepare app:', e);
+      } finally {
+        setIsReady(true);
+      }
+    }
+    prepareApp();
   }, []);
 
-  if (!isLangLoaded) return null; // або SplashScreen
+  if (!isReady) {
+    return null; // SplashScreen
+  }
 
   return (
     <ThemeProvider>
