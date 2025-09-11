@@ -1,126 +1,64 @@
 import * as SQLite from 'expo-sqlite';
 
-const db = SQLite.openDatabase('violations.db');
+let db;
 
-export const initDb = () => {
-  const promise = new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS violations (
-          id INTEGER PRIMARY KEY NOT NULL,
-          title TEXT NOT NULL,
-          description TEXT,
-          photoUri TEXT NOT NULL,
-          date INTEGER NOT NULL,
-          latitude REAL NOT NULL,
-          longitude REAL NOT NULL,
-          isSynced INTEGER NOT NULL
-        );`,
-        [],
-        () => {
-          resolve();
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
-  return promise;
+export const initDb = async () => {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync('violations.db');
+  }
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS violations (
+      id INTEGER PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      photoUri TEXT NOT NULL,
+      date INTEGER NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      isSynced INTEGER NOT NULL
+    );
+  `);
 };
 
-/**
- * Вставляє нове правопорушення в локальну базу даних.
- * За замовчуванням isSynced встановлюється в 0.
- * @param {string} title
- * @param {string} description
- * @param {string} photoUri
- * @param {number} date
- * @param {number} latitude
- * @param {number} longitude
- * @returns {Promise}
- */
-export const insertViolation = (title, description, photoUri, date, latitude, longitude) => {
-  const promise = new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        `INSERT INTO violations (title, description, photoUri, date, latitude, longitude, isSynced) VALUES (?, ?, ?, ?, ?, ?, ?);`,
-        [title, description, photoUri, date, latitude, longitude, 0],
-        (_, result) => {
-          resolve(result);
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
-  return promise;
+export const insertViolation = async (title, description, photoUri, date, latitude, longitude) => {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync('violations.db');
+  }
+
+  await db.runAsync(
+    `INSERT INTO violations (title, description, photoUri, date, latitude, longitude, isSynced)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [title, description, photoUri, date, latitude, longitude, 0]
+  );
 };
 
-/**
- * Отримує всі правопорушення з бази даних.
- * @returns {Promise<Array>}
- */
-export const fetchViolations = () => {
-  const promise = new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        `SELECT * FROM violations;`,
-        [],
-        (_, result) => {
-          resolve(result.rows._array);
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
-  return promise;
+export const fetchViolations = async () => {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync('violations.db');
+  }
+
+  const rows = await db.getAllAsync(`SELECT * FROM violations`);
+  return rows;
 };
 
-/**
- * Отримує всі несинхронізовані правопорушення (isSynced = 0).
- * @returns {Promise<Array>}
- */
-export const fetchUnsyncedViolations = () => {
-  const promise = new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        `SELECT * FROM violations WHERE isSynced = 0;`,
-        [],
-        (_, result) => {
-          resolve(result.rows._array);
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
-  return promise;
+export const fetchUnsyncedViolations = async () => {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync('violations.db');
+  }
+  const rows = await db.getAllAsync(`SELECT * FROM violations WHERE isSynced = 0`);
+  return rows;
 };
+export const updateViolationSyncStatus = async (id) => {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync('violations.db');
+  }
 
-/**
- * Оновлює статус синхронізації для конкретного правопорушення.
- * @param {number} id
- * @returns {Promise}
- */
-export const updateViolationSyncStatus = (id) => {
-  const promise = new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        `UPDATE violations SET isSynced = 1 WHERE id = ?;`,
-        [id],
-        () => {
-          resolve();
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
-  return promise;
+  await db.runAsync(`UPDATE violations SET isSynced = 1 WHERE id = ?`, [id]);
+};
+export const deleteViolation = async (id) => {
+  if (!db) {
+    db = await SQLite.openDatabaseAsync('violations.db');
+  }
+
+  await db.runAsync(`DELETE FROM violations WHERE id = ?`, [id]);
 };
