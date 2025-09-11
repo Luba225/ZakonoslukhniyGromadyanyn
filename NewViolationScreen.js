@@ -5,6 +5,8 @@ import { ThemeContext } from '../context/ThemeContext';
 import { themes } from '../theme/theme';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import NetInfo from '@react-native-community/netinfo';
+import { uploadToCloudinary } from '../utils/uploadToCloudinary';
 import { insertViolation } from '../services/db';
 
 export default function NewViolationScreen() {
@@ -35,7 +37,7 @@ export default function NewViolationScreen() {
       return;
     }
 
-    // Отримання геолокації
+    // геолокація
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       setErrorMsg('Permission to access location was denied');
@@ -46,30 +48,45 @@ export default function NewViolationScreen() {
     let currentLocation = await Location.getCurrentPositionAsync({});
     setLocation(currentLocation);
 
-    const newViolation = {
-      title: 'New Violation',
-      description: description,
-      photoUri: imageUri,
-      date: new Date().getTime(),
-      latitude: currentLocation.coords.latitude,
-      longitude: currentLocation.coords.longitude,
-    };
+    const date = new Date().getTime();
+    const latitude = currentLocation.coords.latitude;
+    const longitude = currentLocation.coords.longitude;
 
+    let finalPhotoUrl = imageUri;
+    let synced = 0;
+
+    // перевірка інтернету
+    const netState = await NetInfo.fetch();
+    if (netState.isConnected) {
+      try {
+        //  в Cloudinary
+        const cloudinaryUrl = await uploadToCloudinary(imageUri);
+        finalPhotoUrl = cloudinaryUrl;
+        synced = 1;
+        console.log('✅ Фото успішно завантажене на Cloudinary');
+      } catch (err) {
+        console.warn('⚠️ Не вдалося завантажити фото на Cloudinary:', err.message);
+      }
+    } else {
+      console.log('📴 Немає інтернету — зберігаємо локально');
+    }
+
+    // в SQLite
     try {
       await insertViolation(
-        newViolation.title,
-        newViolation.description,
-        newViolation.photoUri,
-        newViolation.date,
-        newViolation.latitude,
-        newViolation.longitude
+        'New Violation',
+        description,
+        finalPhotoUrl,
+        date,
+        latitude,
+        longitude
       );
-      Alert.alert('Success', 'Violation saved locally!');
+      Alert.alert('✅ Успіх', synced ? 'Порушення синхронізовано!' : 'Порушення збережено локально!');
       setDescription('');
       setImageUri(null);
     } catch (err) {
       console.log('DB Save Error:', err);
-      Alert.alert('Error', 'Failed to save violation locally.');
+      Alert.alert('❌ Помилка', 'Не вдалося зберегти порушення локально.');
     }
   };
 

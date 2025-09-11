@@ -1,10 +1,11 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useTranslation } from 'react-i18next';
 import { ThemeContext } from '../context/ThemeContext';
 import { themes } from '../theme/theme';
 import { fetchViolations } from '../services/db';
+
 
 export default function MapScreen() {
   const { t } = useTranslation();
@@ -51,6 +52,7 @@ export default function MapScreen() {
         </MapView>
       ) : (
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.text}/>
           <Text style={styles.text}>{t('map_loading')}</Text>
         </View>
       )}
@@ -76,3 +78,4 @@ const getStyles = (theme) =>
       color: theme.text,
       fontSize: 20,
     },
+  });
