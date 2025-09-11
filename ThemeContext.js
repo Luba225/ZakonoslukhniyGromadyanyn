@@ -1,31 +1,33 @@
-// Глобальна зміна theme в усьому додатку
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { themes } from '../theme/theme';
 
 export const ThemeContext = createContext();
-
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('blue');
 
-  // При запуску читаємо тему з AsyncStorage
   useEffect(() => {
     (async () => {
       const savedTheme = await AsyncStorage.getItem('APP_THEME');
-      if (savedTheme) {
+      if (savedTheme && themes[savedTheme]) {
         setTheme(savedTheme);
+      } else {
+        setTheme('blue');
       }
     })();
   }, []);
 
-// Перемикання теми
-  const toggleTheme = async () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    await AsyncStorage.setItem('APP_THEME', newTheme);
+  const changeTheme = async (newTheme) => {
+    if (themes[newTheme]) {
+      setTheme(newTheme);
+      await AsyncStorage.setItem('APP_THEME', newTheme);
+    } else {
+      console.warn(`❌ Unknown theme selected: ${newTheme}`);
+    }
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, changeTheme }}>
       {children}
     </ThemeContext.Provider>
   );
