@@ -1,22 +1,47 @@
 import React, { useState, useContext } from 'react';
-import {View,Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, KeyboardAvoidingView, Platform,} from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ThemeContext } from '../context/ThemeContext';
+import { loginUser, registerUser } from '../api/auth'; // функції API для бекенду
 
 const AuthScreen = ({ onLogin }) => {
   const { t } = useTranslation();
   const { theme } = useContext(ThemeContext);
 
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = () => {
-    if (!email || !password) return alert(t('fill_all_fields'));
-    if (!email.includes('@')) return alert(t('invalid_email'));
+  const handleSubmit = async () => {
+    if (!email || (!isLogin && !name)) {
+      return Alert.alert(t('fill_all_fields'));
+    }
+    if (!email.includes('@')) return Alert.alert(t('invalid_email'));
 
-    console.log(isLogin ? '🔐 Login:' : '🆕 Register:', email);
-    onLogin();
+    try {
+      if (isLogin) {
+        const user = await loginUser({ email, password });
+        console.log('🔐 Login:', user);
+      } else {
+        const user = await registerUser({ name, email, password });
+        console.log('🆕 Register:', user);
+      }
+      onLogin(); // відмічаємо, що користувач увійшов
+    } catch (err: any) {
+      console.error('❌ Auth error:', err.response?.data || err.message);
+      Alert.alert(t('auth_error'));
+    }
   };
 
   const toggleMode = () => {
@@ -34,9 +59,17 @@ const AuthScreen = ({ onLogin }) => {
         style={styles.overlay}
       >
         <View style={styles.container}>
-          <Text style={styles.title}>
-            {isLogin ? t('login') : t('register')}
-          </Text>
+          <Text style={styles.title}>{isLogin ? t('login') : t('register')}</Text>
+
+          {!isLogin && (
+            <TextInput
+              style={styles.input}
+              placeholder={t('name')}
+              placeholderTextColor="#eee"
+              value={name}
+              onChangeText={setName}
+            />
+          )}
 
           <TextInput
             style={styles.input}
@@ -44,6 +77,7 @@ const AuthScreen = ({ onLogin }) => {
             placeholderTextColor="#eee"
             value={email}
             onChangeText={setEmail}
+            keyboardType="email-address"
           />
           <TextInput
             style={styles.input}
@@ -55,9 +89,7 @@ const AuthScreen = ({ onLogin }) => {
           />
 
           <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <Text style={styles.buttonText}>
-              {isLogin ? t('login') : t('register')}
-            </Text>
+            <Text style={styles.buttonText}>{isLogin ? t('login') : t('register')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={toggleMode}>
